@@ -161,24 +161,24 @@ NeRF 구현을 위해 dataset을 다운 받으면 다음과 같이 나와있다.
 
 1. focal length
     
-    ![스크린샷 2025-11-26 오후 1.41.55.png](Camera%20Parameters%20for%20Ray%20Casting/%E1%84%89%E1%85%B3%E1%84%8F%E1%85%B3%E1%84%85%E1%85%B5%E1%86%AB%E1%84%89%E1%85%A3%E1%86%BA_2025-11-26_%E1%84%8B%E1%85%A9%E1%84%92%E1%85%AE_1.41.55.png)
+    ![스크린샷 2025-11-26 오후 1.41.55.png](Camera%20Parameters%20for%20Ray%20Casting/스크린샷_2025-11-26_오후_1.41.55.png)
     
     ⇒ 위와 같이, img의 사이즈에 영향을 주게 된다.
     
 2. Pinhole size
     
-    ![스크린샷 2025-11-26 오후 1.42.50.png](Camera%20Parameters%20for%20Ray%20Casting/%E1%84%89%E1%85%B3%E1%84%8F%E1%85%B3%E1%84%85%E1%85%B5%E1%86%AB%E1%84%89%E1%85%A3%E1%86%BA_2025-11-26_%E1%84%8B%E1%85%A9%E1%84%92%E1%85%AE_1.42.50.png)
+    ![스크린샷 2025-11-26 오후 1.42.50.png](Camera%20Parameters%20for%20Ray%20Casting/스크린샷_2025-11-26_오후_1.42.50.png)
     
     위와 같이, pinhole의 크기가 커졌을 때, 더 빛이 퍼지며 들어와, 더 blurry해지게 된다.
     
 
 이 외에도 짧게 렌즈에 대해서도 알아봤는데, 여기서 렌즈를 중간에 낄 때는 focal length가 pinhole일 때와는 다르게 작용한다고 한다.
 
-![스크린샷 2025-11-26 오후 1.44.30.png](Camera%20Parameters%20for%20Ray%20Casting/%E1%84%89%E1%85%B3%E1%84%8F%E1%85%B3%E1%84%85%E1%85%B5%E1%86%AB%E1%84%89%E1%85%A3%E1%86%BA_2025-11-26_%E1%84%8B%E1%85%A9%E1%84%92%E1%85%AE_1.44.30.png)
+![스크린샷 2025-11-26 오후 1.44.30.png](Camera%20Parameters%20for%20Ray%20Casting/스크린샷_2025-11-26_오후_1.44.30.png)
 
 ⇒ 근데 pinhole만 보기로 했는데, 왜 갑자기 lens가 나오나?
 
-![스크린샷 2025-11-26 오후 1.46.00.png](Camera%20Parameters%20for%20Ray%20Casting/%E1%84%89%E1%85%B3%E1%84%8F%E1%85%B3%E1%84%85%E1%85%B5%E1%86%AB%E1%84%89%E1%85%A3%E1%86%BA_2025-11-26_%E1%84%8B%E1%85%A9%E1%84%92%E1%85%AE_1.46.00.png)
+![스크린샷 2025-11-26 오후 1.46.00.png](Camera%20Parameters%20for%20Ray%20Casting/스크린샷_2025-11-26_오후_1.46.00.png)
 
 ⇒ 이 그림에서 알 수 있듯이, pinhole이나, lens나 central ray가 움직이는 경로는 동일하다!
 
@@ -196,7 +196,7 @@ NeRF 구현을 위해 dataset을 다운 받으면 다음과 같이 나와있다.
 
 이것을 이제 데카르트 좌표계 위에 단순화 해서 올려보자
 
-![스크린샷 2025-11-26 오후 1.56.33.png](Camera%20Parameters%20for%20Ray%20Casting/%E1%84%89%E1%85%B3%E1%84%8F%E1%85%B3%E1%84%85%E1%85%B5%E1%86%AB%E1%84%89%E1%85%A3%E1%86%BA_2025-11-26_%E1%84%8B%E1%85%A9%E1%84%92%E1%85%AE_1.56.33.png)
+![스크린샷 2025-11-26 오후 1.56.33.png](Camera%20Parameters%20for%20Ray%20Casting/스크린샷_2025-11-26_오후_1.46.00.png)
 
 그렇다면, 이런 모양이 되고, z=1인 이유는, 의도적으로 그렇게 잡은 것이다. focal length = 1로 설정한 상태로 구하는 것이다(나중에 일반화 시킬 것이다.)
 
@@ -256,7 +256,7 @@ $$
 
 이 다음은 **원점(origin)**을 맞추는 단계이다.
 
-![스크린샷 2025-11-26 오후 2.33.00.png](Camera%20Parameters%20for%20Ray%20Casting/%E1%84%89%E1%85%B3%E1%84%8F%E1%85%B3%E1%84%85%E1%85%B5%E1%86%AB%E1%84%89%E1%85%A3%E1%86%BA_2025-11-26_%E1%84%8B%E1%85%A9%E1%84%92%E1%85%AE_2.33.00.png)
+![스크린샷 2025-11-26 오후 2.33.00.png](Camera%20Parameters%20for%20Ray%20Casting/스크린샷_2025-11-26_오후_2.33.00.png)
 
 일반적으로 camera와 img는 서로 다른 coordinate system을 갖고 있다. 이를 맞춰주는 것이다.
 
@@ -309,7 +309,7 @@ $$
 
 ⇒ 기울어진 정도를 의미한다.
 
-![ref) [https://xoft.tistory.com/12](https://xoft.tistory.com/12)](Camera%20Parameters%20for%20Ray%20Casting/%E1%84%89%E1%85%B3%E1%84%8F%E1%85%B3%E1%84%85%E1%85%B5%E1%86%AB%E1%84%89%E1%85%A3%E1%86%BA_2025-11-26_%E1%84%8B%E1%85%A9%E1%84%92%E1%85%AE_6.01.35.png)
+![ref) [https://xoft.tistory.com/12](https://xoft.tistory.com/12)](Camera%20Parameters%20for%20Ray%20Casting/스크린샷_2025-11-26_오후_6.01.35.png)
 
 ref) [https://xoft.tistory.com/12](https://xoft.tistory.com/12)
 
@@ -330,7 +330,7 @@ ref) [https://xoft.tistory.com/12](https://xoft.tistory.com/12)
 
 더 정확히는 두 개의 origin을 맞춰주고, world coordinate에 있는 것이 정확히 camera coordinate에 있는 애에 mapping되게 해주는 것이다. 아래 그림을 보자.
 
-![스크린샷 2025-11-26 오후 6.08.09.png](Camera%20Parameters%20for%20Ray%20Casting/%E1%84%89%E1%85%B3%E1%84%8F%E1%85%B3%E1%84%85%E1%85%B5%E1%86%AB%E1%84%89%E1%85%A3%E1%86%BA_2025-11-26_%E1%84%8B%E1%85%A9%E1%84%92%E1%85%AE_6.08.09.png)
+![스크린샷 2025-11-26 오후 6.08.09.png](Camera%20Parameters%20for%20Ray%20Casting/스크린샷_2025-11-26_오후_6.08.09.png)
 
 - $\~{C}$ : camera coordinate의 중심
 - $\tilde{X_w}$ : world coordinate에 있는 한 점.
@@ -347,7 +347,7 @@ $$
 
 그러니, camera coordinate으로 끌고 오려면, 그 중심값을 빼줌으로써 가져온다는 느낌이다. 약간 아래 평행이동 그림이랑도 같다고 생각한다. ~~개인적으로는~~
 
-![ref) [https://suhak.tistory.com/1495](https://suhak.tistory.com/1495)](Camera%20Parameters%20for%20Ray%20Casting/%E1%84%89%E1%85%B3%E1%84%8F%E1%85%B3%E1%84%85%E1%85%B5%E1%86%AB%E1%84%89%E1%85%A3%E1%86%BA_2025-11-26_%E1%84%8B%E1%85%A9%E1%84%92%E1%85%AE_6.15.16.png)
+![ref) [https://suhak.tistory.com/1495](https://suhak.tistory.com/1495)](Camera%20Parameters%20for%20Ray%20Casting/스크린샷_2025-11-26_오후_6.15.16.png)
 
 ref) [https://suhak.tistory.com/1495](https://suhak.tistory.com/1495)
 
@@ -357,7 +357,7 @@ ref) [https://suhak.tistory.com/1495](https://suhak.tistory.com/1495)
 
 왤까?
 
-![스크린샷 2025-11-26 오후 6.25.39.png](Camera%20Parameters%20for%20Ray%20Casting/%E1%84%89%E1%85%B3%E1%84%8F%E1%85%B3%E1%84%85%E1%85%B5%E1%86%AB%E1%84%89%E1%85%A3%E1%86%BA_2025-11-26_%E1%84%8B%E1%85%A9%E1%84%92%E1%85%AE_6.25.39.png)
+![스크린샷 2025-11-26 오후 6.25.39.png](Camera%20Parameters%20for%20Ray%20Casting/스크린샷_2025-11-26_오후_6.25.39.png)
 
 위 그림에서처럼 두 system의 회전 정도가 일치하지 않아서라는데, 난 이렇게 해석했다.
 
@@ -496,7 +496,7 @@ $K= \begin{bmatrix} 1& 0& p_x \\ 0 &1 & p_y \\ 0& 0& 1&\end{bmatrix}\begin{bmatr
 
 우리의 시작으로 되돌아가면 알 수 있다.
 
-![스크린샷 2025-11-26 오후 7.48.33.png](Camera%20Parameters%20for%20Ray%20Casting/%E1%84%89%E1%85%B3%E1%84%8F%E1%85%B3%E1%84%85%E1%85%B5%E1%86%AB%E1%84%89%E1%85%A3%E1%86%BA_2025-11-26_%E1%84%8B%E1%85%A9%E1%84%92%E1%85%AE_7.48.33.png)
+![스크린샷 2025-11-26 오후 7.48.33.png](Camera%20Parameters%20for%20Ray%20Casting/스크린샷_2025-11-26_오후_7.48.33.png)
 
 바로 광선에 대한 정보들이다.
 
