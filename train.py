@@ -1,5 +1,7 @@
+import os
 import numpy as np
 import torch
+import matplotlib.pyplot as plt
 from tqdm import tqdm
 
 from get_rays import get_ray
@@ -9,7 +11,53 @@ from data_loader import load_full_data
 from set_device import set_device
 from volume_rendering import volume_rendering
 
-def train(model=None, optimizer=None):
+def mse2pnsr(mse):
+      return -10 * torch.log10(mse)
+
+# 검증용 img 1장(test의 0번째 이미지로) 렌더링 함수
+@torch.np_grad() # 학습 아니니, grad 하지 말라는 표시
+def rendering_one_img_for_test(model, idx=0, device = None, target='lego'):
+      width, height = 800, 800
+      rays_d, rays_o = get_ray(category='test', target=target, i=idx)
+
+      rays_o = torch.from_numpy(rays_o.reshape(-1,3)).float().to(device)
+      rays_d = torch.from_numpy(rays_d.reshape(-1,3)).float().to(device)
+
+      true_img = get_rgb('test','lego',idx)
+
+      # chunking으로 메모리 터지는 거 방지
+      chunk_size = 4096
+      all_rgb = []
+
+      for i in range(0, rays_o.shape[0], chunk_size):
+            batch_o = rays_o[i : i+chunk_size]
+            batch_d = rays_d[i : i+chunk_size]
+            
+            # test니까 그냥 64개 포인트로 지정
+            pts, t_vals = get_samples(batch_d, batch_o, 64)
+
+            pts_flat = pts.reshape(-1,3)
+            dirs_expanded = batch_d[:,None,:].expand_as(pts)
+            dirs_flat = dirs_expanded.reshape(-1,3)
+
+            raw_rgb, raw_sigma = model(pts_flat, dirs_flat)
+
+            rgb_for_vr = raw_rgb.reshape(batch_o.shape[0],64,3)
+            sigma_for_vr = raw_sigma.reshape(batch_o.shape[0],64)
+
+            rgb_chunk = volume_rendering(rgb_for_vr, sigma_for_vr, t_vals, batch_d)
+
+            all_rgb.append(rgb_chunk.cpu())
+
+      pred_img= torch.cat(all_rgb, dim=0).reshape(height, width, 3).numpy()
+
+      pred_img = np.clip(pred_img, 0 ,1)
+
+      return pred_img, true_img
+
+
+
+def train(model=None, optimizer=None, target = 'lego'):
         device = set_device()
 
         model = model.to(device)
@@ -17,7 +65,7 @@ def train(model=None, optimizer=None):
         num_img = 100
         num_of_pts_per_ray = 64
 
-        merged_ray_o, merged_ray_d, merged_rgb = load_full_data(num_img, target='lego')
+        merged_ray_o, merged_ray_d, merged_rgb = load_full_data(num_img, target)
 
 
         # 이제 학습 시작
@@ -81,10 +129,44 @@ def train(model=None, optimizer=None):
             # optimizer가 이것을 읽어서 오류를 반영해준다.
             optimizer.step()
 
+            # 진짜와 비교 and 가중치 저장
+            if i%500 == 0 and i >0:
+                  # PSNR과 진짜 이미지와의 비교를 통해, 직접 얼마나 성장했나 보기
+                  psnr_val = mse2pnsr(loss).item()
+
+                  model.eval()
+                  with torch.no_grad():
+                        pred_img, true_img = rendering_one_img_for_test(model, idx=0, device = device, target=target)
+                  model.train()
+
+                  pbar.set_postfix({'Loss':f'{loss.item():.4f}', 'PSNR' : f'{psnr_val:.2f}'})
+
+                  combined_img = np.stack(pred_img, true_img)
+
+                  save_dir = 'test_img'
+                  if not os.path.exists(save_dir):
+                        os.makedirs(save_dir) 
+
+                  plt.figure(figsize=(10,5))
+
+                  plt.imshow(combined_img)
+                  plt.text(10,60, f"Epoch: {i}\nPSNR: {psnr_val:.2f} dB",
+                           color = 'yellow', fontsize=12, fontweight = 'bold',
+                           bbox = dict(facecolor='black', alpha= 0.5))
+                  
+                  plt.text(10, 30, 'Prediction', color = 'white', fontweight = 'bold')
+                  plt.text(800+10, 30, "Truth", color = 'white', fontweight ='bold')
+
+                  plt.axis('off')
 
 
+                  save_path = f"test_img/test_{i}_epoch.png"
+                  plt.savefig(save_path, bbox_inches='tight', pad_inches= 0)
+                  plt.close()
 
-
+                  # 가중치 저장
+                  torch.save(model.state_dict(), f"NeRF_weights_{i}.pth")
+                  print(f"{i}th model saved.\n")
 
 
 
