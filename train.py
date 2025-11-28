@@ -15,15 +15,15 @@ def mse2pnsr(mse):
       return -10 * torch.log10(mse)
 
 # 검증용 img 1장(test의 0번째 이미지로) 렌더링 함수
-@torch.np_grad() # 학습 아니니, grad 하지 말라는 표시
+@torch.no_grad() # 학습 아니니, grad 하지 말라는 표시
 def rendering_one_img_for_test(model, idx=0, device = None, target='lego'):
       width, height = 800, 800
-      rays_d, rays_o = get_ray(category='test', target=target, i=idx)
+      rays_d, rays_o, img_file_path = get_ray(category='test', target=target, i=idx)
 
-      rays_o = torch.from_numpy(rays_o.reshape(-1,3)).float().to(device)
-      rays_d = torch.from_numpy(rays_d.reshape(-1,3)).float().to(device)
+      rays_o = torch.from_numpy(rays_o.reshape(-1,3).copy()).float().to(device)
+      rays_d = torch.from_numpy(rays_d.reshape(-1,3).copy()).float().to(device)
 
-      true_img = get_rgb('test','lego',idx)
+      true_img = get_rgb(img_file_path)
 
       # chunking으로 메모리 터지는 거 방지
       chunk_size = 4096
@@ -34,7 +34,7 @@ def rendering_one_img_for_test(model, idx=0, device = None, target='lego'):
             batch_d = rays_d[i : i+chunk_size]
             
             # test니까 그냥 64개 포인트로 지정
-            pts, t_vals = get_samples(batch_d, batch_o, 64)
+            pts, t_vals = get_samples(batch_d, batch_o, num_of_samples = 64, mode='test')
 
             pts_flat = pts.reshape(-1,3)
             dirs_expanded = batch_d[:,None,:].expand_as(pts)
@@ -45,7 +45,7 @@ def rendering_one_img_for_test(model, idx=0, device = None, target='lego'):
             rgb_for_vr = raw_rgb.reshape(batch_o.shape[0],64,3)
             sigma_for_vr = raw_sigma.reshape(batch_o.shape[0],64)
 
-            rgb_chunk = volume_rendering(rgb_for_vr, sigma_for_vr, t_vals, batch_d)
+            rgb_chunk = volume_rendering(rgb_for_vr, sigma_for_vr, t_vals)
 
             all_rgb.append(rgb_chunk.cpu())
 
@@ -58,31 +58,54 @@ def rendering_one_img_for_test(model, idx=0, device = None, target='lego'):
 
 
 def train(model=None, optimizer=None, target = 'lego'):
-        device = set_device()
+      device = set_device()
 
-        model = model.to(device)
+      model = model.to(device)
 
-        num_img = 100
-        num_of_pts_per_ray = 64
+      num_img = 100
+      num_of_pts_per_ray = 64
 
-        merged_ray_o, merged_ray_d, merged_rgb = load_full_data(num_img, target)
+      merged_ray_o, merged_ray_d, merged_rgb = load_full_data(num_img, target)
 
 
-        # 이제 학습 시작
-        # epoch도 설정하고, sample을 몇 개 쓸 지도 결정하면 된다.
-        epoch = 100000
-        num_of_rays = 1024
+      # 이제 학습 시작
+      # epoch도 설정하고, sample을 몇 개 쓸 지도 결정하면 된다.
+      epoch = 100000
+      num_of_rays = 1024
+      start_epoch = 0
 
-        pbar = tqdm(range(epoch))
+      # 노트북 발열이 심해서 잠깐 멈췄다. 아래는 그동안 학습한 거 저장한 걸 가지고 이어나가는 코드다.
+      # 아래 resume_path는 직접 썼다. 나중에 중단 포인트가 바뀌면 변경해서 하면 됨.
+      resume_path = 'NeRF_weights/NeRF_weights_27500.pth'
 
-        for i in pbar:
+      if os.path.exists(resume_path):
+            print(f"Resuming training from {resume_path}")
+            
+            checkpoint = torch.load(resume_path, map_location=device)
+            model.load_state_dict(checkpoint)
+
+            try:
+                  loaded_epoch = int(resume_path.split('_')[-1].replace('.pth',''))
+                  start_epoch = loaded_epoch + 1
+                  print(f"Train restarted from {start_epoch}!")
+
+            except:
+                  print("Cannot read the epoch_num. Restart from 0 epoch.")
+                  start_epoch = 0
+
+      else:
+            print('Train start from scratch! No check point found')
+
+      pbar = tqdm(range(start_epoch,epoch))
+
+      for i in pbar:
             idx = np.random.choice(len(merged_ray_d),num_of_rays)
 
             batch_o = merged_ray_o[idx].to(device)
             batch_d = merged_ray_d[idx].to(device)
             batch_rgb = merged_rgb[idx].to(device)
 
-            pts, pts_dist_info = get_samples(batch_d, batch_o, num_of_rays)
+            pts, pts_dist_info = get_samples(batch_d, batch_o, mode='train')
 
 
             # 여기부터 조금 어렵다...
@@ -141,21 +164,21 @@ def train(model=None, optimizer=None, target = 'lego'):
 
                   pbar.set_postfix({'Loss':f'{loss.item():.4f}', 'PSNR' : f'{psnr_val:.2f}'})
 
-                  combined_img = np.stack(pred_img, true_img)
+                  combined_img = np.hstack((pred_img, true_img))
 
                   save_dir = 'test_img'
                   if not os.path.exists(save_dir):
-                        os.makedirs(save_dir) 
+                        os.makedirs(save_dir)
 
                   plt.figure(figsize=(10,5))
 
                   plt.imshow(combined_img)
-                  plt.text(10,60, f"Epoch: {i}\nPSNR: {psnr_val:.2f} dB",
+                  plt.text(10,700+60, f"Epoch: {i}\nPSNR: {psnr_val:.2f} dB",
                            color = 'yellow', fontsize=12, fontweight = 'bold',
                            bbox = dict(facecolor='black', alpha= 0.5))
                   
-                  plt.text(10, 30, 'Prediction', color = 'white', fontweight = 'bold')
-                  plt.text(800+10, 30, "Truth", color = 'white', fontweight ='bold')
+                  plt.text(10, 30, 'Prediction', color = 'black', fontweight = 'bold')
+                  plt.text(800+10, 30, "Truth", color = 'black', fontweight ='bold')
 
                   plt.axis('off')
 
@@ -164,9 +187,16 @@ def train(model=None, optimizer=None, target = 'lego'):
                   plt.savefig(save_path, bbox_inches='tight', pad_inches= 0)
                   plt.close()
 
+
                   # 가중치 저장
-                  torch.save(model.state_dict(), f"NeRF_weights_{i}.pth")
-                  print(f"{i}th model saved.\n")
+                  save_dir = 'NeRF_weights'
+        
+                  if not os.path.exists(save_dir):
+                        os.makedirs(save_dir)
+
+                  file_path = os.path.join(save_dir, f"NeRF_weights_{i}.pth")
+
+                  torch.save(model.state_dict(), file_path)
 
 
 
