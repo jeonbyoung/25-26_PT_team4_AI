@@ -76,7 +76,7 @@ def train(model=None, optimizer=None, target = 'lego'):
 
       # 노트북 발열이 심해서 잠깐 멈췄다. 아래는 그동안 학습한 거 저장한 걸 가지고 이어나가는 코드다.
       # 아래 resume_path는 직접 썼다. 나중에 중단 포인트가 바뀌면 변경해서 하면 됨.
-      resume_path = 'NeRF_weights/NeRF_weights_27500.pth'
+      resume_path = 'NeRF_weights/NeRF_weights_27700.pth'
 
       if os.path.exists(resume_path):
             print(f"Resuming training from {resume_path}")
@@ -96,7 +96,7 @@ def train(model=None, optimizer=None, target = 'lego'):
       else:
             print('Train start from scratch! No check point found')
 
-      pbar = tqdm(range(start_epoch,epoch))
+      pbar = tqdm(range(start_epoch,epoch),ncols=120)
 
       for i in pbar:
             idx = np.random.choice(len(merged_ray_d),num_of_rays)
@@ -137,8 +137,7 @@ def train(model=None, optimizer=None, target = 'lego'):
             loss = torch.mean((pred_rgb - batch_rgb)**2)
             
             if(i%10==0):
-                  pbar.set_description(f"Epoch {i}")
-                  pbar.set_postfix({'Loss': loss.item()})
+                  pbar.set_postfix({'Epoch': i,'Loss': loss.item()})
 
             # 이전 gradient값 초기화
             optimizer.zero_grad()
