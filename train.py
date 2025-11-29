@@ -71,7 +71,7 @@ def train(model=None, optimizer=None, target = 'lego'):
       # 이제 학습 시작
       # epoch도 설정하고, sample을 몇 개 쓸 지도 결정하면 된다.
       epoch = 100000
-      num_of_rays = 2048
+      num_of_rays = 1024
       start_epoch = 0
 
       # 노트북 발열이 심해서 잠깐 멈췄다. 아래는 그동안 학습한 거 저장한 걸 가지고 이어나가는 코드다.
