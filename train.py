@@ -71,12 +71,12 @@ def train(model=None, optimizer=None, target = 'lego'):
       # 이제 학습 시작
       # epoch도 설정하고, sample을 몇 개 쓸 지도 결정하면 된다.
       epoch = 100000
-      num_of_rays = 1024
+      num_of_rays = 2048
       start_epoch = 0
 
       # 노트북 발열이 심해서 잠깐 멈췄다. 아래는 그동안 학습한 거 저장한 걸 가지고 이어나가는 코드다.
       # 아래 resume_path는 직접 썼다. 나중에 중단 포인트가 바뀌면 변경해서 하면 됨.
-      resume_path = 'NeRF_weights/NeRF_weights_27700.pth'
+      resume_path = 'NeRF_weights/NeRF_weights_n.pth'
 
       if os.path.exists(resume_path):
             print(f"Resuming training from {resume_path}")
@@ -96,7 +96,7 @@ def train(model=None, optimizer=None, target = 'lego'):
       else:
             print('Train start from scratch! No check point found')
 
-      pbar = tqdm(range(start_epoch,epoch),ncols=120)
+      pbar = tqdm(range(start_epoch,epoch),ncols=100)
 
       for i in pbar:
             idx = np.random.choice(len(merged_ray_d),num_of_rays)
@@ -152,7 +152,7 @@ def train(model=None, optimizer=None, target = 'lego'):
             optimizer.step()
 
             # 진짜와 비교 and 가중치 저장
-            if i%500 == 0 and i >0:
+            if i%1000 == 0 and i >0:
                   # PSNR과 진짜 이미지와의 비교를 통해, 직접 얼마나 성장했나 보기
                   psnr_val = mse2pnsr(loss).item()
 
