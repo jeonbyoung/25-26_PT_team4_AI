@@ -63,7 +63,7 @@ def train(model=None, optimizer=None, target = 'lego'):
       model = model.to(device)
 
       num_img = 100
-      num_of_pts_per_ray = 64
+      num_of_pts_per_ray = 128
 
       merged_ray_o, merged_ray_d, merged_rgb = load_full_data(num_img, target)
 
