@@ -48,5 +48,12 @@ def volume_rendering(rgb, sigma, info_for_dist):
     # 한 ray 위에 올라간 색들을 모두 더해서, 해당 ray에서 보일 색을 추출하자.
     pred_rgb = torch.sum(pred_rgb, dim=-2) # 1024*64(points on ray)*3이니, 64에 있는 값들을 다 더한다.
 
+    # 현재 volume rendering 공식은, 배경을 검은색으로 인식하게 된다.
+    # acc_map은 광선이 물체에 부딪힌 총량(0~1)을 나타낸다.
+    # 1이면 물체에 꽉 막힌다는 것이다. 0이면 뻥 뚫려있다. 즉, 배경이나, 빈 공간이다.
+    # 1.0 - acc_map으로 빈 공간을 1.0으로 채워주는 코드를 만들자.
+    acc_map = torch.sum(weight, dim=-1)
+    pred_rgb = pred_rgb + (1.0 - acc_map[...,None])
+
 
     return pred_rgb
