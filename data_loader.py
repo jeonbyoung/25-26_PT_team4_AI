@@ -31,8 +31,9 @@ def load_full_data(num_imgs=100, target='lego'):
             rgb = rgb.reshape(H,H,-1)
 
         H, W = ray_o.shape[:2]
-        crop_h = int(H*0.5)
-        crop_w = int(W*0.5)
+        crop_ratio = 0.9
+        crop_h = int(H*crop_ratio)
+        crop_w = int(W*crop_ratio)
 
         start_h = (H-crop_h)//2
         end_h = start_h + crop_h
