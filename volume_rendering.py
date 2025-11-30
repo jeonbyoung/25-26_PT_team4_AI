@@ -41,19 +41,36 @@ def volume_rendering(rgb, sigma, info_for_dist):
     # 이제 그동안 구한 alpha, T, 그리고 이전에서 가져온 rgb를 통해 값을 통해 예측 값을 도출한다.
     # 근데 또 문제가 있다. alpha,T는 차원이 맞는데, rgb는 1차원이 더 붙는다. 채널 컬러값이다.
     # 그래서 alpha, T의 차원을 늘린다.
-    weight = T*alpha
-    pred_rgb = weight[...,None]*rgb
+    weights = T*alpha
+    #pred_rgb = weight[...,None]*rgb
     
     # 이제 마지막이다.
     # 한 ray 위에 올라간 색들을 모두 더해서, 해당 ray에서 보일 색을 추출하자.
-    pred_rgb = torch.sum(pred_rgb, dim=-2) # 1024*64(points on ray)*3이니, 64에 있는 값들을 다 더한다.
+    #pred_rgb = torch.sum(pred_rgb, dim=-2) # 1024*64(points on ray)*3이니, 64에 있는 값들을 다 더한다.
 
     # 현재 volume rendering 공식은, 배경을 검은색으로 인식하게 된다.
     # acc_map은 광선이 물체에 부딪힌 총량(0~1)을 나타낸다.
     # 1이면 물체에 꽉 막힌다는 것이다. 0이면 뻥 뚫려있다. 즉, 배경이나, 빈 공간이다.
     # 1.0 - acc_map으로 빈 공간을 1.0으로 채워주는 코드를 만들자.
-    acc_map = torch.sum(weight, dim=-1)
-    pred_rgb = pred_rgb + (1.0 - acc_map[...,None])
+    #acc_map = torch.sum(weight, dim=-1)
+    #pred_rgb = pred_rgb + (1.0 - acc_map[...,None])
+
+    #return pred_rgb
 
 
-    return pred_rgb
+    # coarse 방식이 실패하고, coarse-to-fine을 적용한다. gemini에게 긴급처방 받고, 후에 보정 예정.
+
+    # 2. RGB map 계산 (weights 변수를 재사용)
+    rgb_map = torch.sum(weights[..., None] * rgb, dim=-2)
+    
+    # 3. White Background 처리 (배경 흰색으로)
+    acc_map = torch.sum(weights, dim=-1)
+    rgb_map = rgb_map + (1.0 - acc_map[..., None])
+
+    # 4. Depth map (필요 시 사용, 구조 유지를 위해 계산해둠)
+    depth_map = torch.sum(weights * info_for_dist, dim=-1)
+
+    # [핵심] weights를 반드시 반환해야 Coarse-to-Fine 샘플링이 가능합니다!
+    return rgb_map, weights
+
+    

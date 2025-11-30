@@ -29,3 +29,44 @@ def get_samples(ray_direction, ray_origin, near=2.0, far=6.0, num_of_samples = 6
     samples = ray_origin[..., None, :] + ray_direction[..., None, :]*t_values[..., None]
 
     return samples, t_values
+
+
+
+# Gemini 도움
+# get_samples.py (기존 코드 아래에 이어서 붙여넣기)
+
+def sample_pdf(bins, weights, N_importance, det=False, eps=1e-5):
+    """
+    Coarse 단계에서 얻은 weights(불투명도)를 확률분포로 변환하여,
+    물체가 있는 곳에 샘플(N_importance)을 집중적으로 다시 뿌리는 함수
+    """
+    weights = weights + 1e-5 # 0 나누기 방지
+    pdf = weights / torch.sum(weights, -1, keepdim=True)
+    cdf = torch.cumsum(pdf, -1)
+    cdf = torch.cat([torch.zeros_like(cdf[...,:1]), cdf], -1) 
+
+    # 1. 0~1 사이의 난수 생성
+    if det:
+        u = torch.linspace(0., 1., steps=N_importance, device=bins.device)
+        u = u.expand(list(cdf.shape[:-1]) + [N_importance])
+    else:
+        u = torch.rand(list(cdf.shape[:-1]) + [N_importance], device=bins.device)
+
+    # 2. 역변환 샘플링 (Inverse Transform Sampling)
+    u = u.contiguous()
+    inds = torch.searchsorted(cdf, u, right=True)
+    below = torch.max(torch.zeros_like(inds-1), inds-1)
+    above = torch.min((cdf.shape[-1]-1) * torch.ones_like(inds), inds)
+    
+    inds_g = torch.stack([below, above], -1) 
+    
+    matched_shape = [inds_g.shape[0], inds_g.shape[1], cdf.shape[-1]]
+    cdf_g = torch.gather(cdf.unsqueeze(1).expand(matched_shape), 2, inds_g)
+    bins_g = torch.gather(bins.unsqueeze(1).expand(matched_shape), 2, inds_g)
+
+    denom = (cdf_g[...,1]-cdf_g[...,0])
+    denom = torch.where(denom<1e-5, torch.ones_like(denom), denom)
+    t = (u-cdf_g[...,0])/denom
+    
+    samples = bins_g[...,0] + t * (bins_g[...,1]-bins_g[...,0])
+    return samples
