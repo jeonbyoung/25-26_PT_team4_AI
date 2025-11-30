@@ -90,7 +90,7 @@ def render_video(model= None, save_path='result.mp4'):
             rgb_for_vr = raw_rgb.reshape(batch_o.shape[0],64,3)
             sigma_for_vr = raw_sigma.reshape(batch_o.shape[0],64)
 
-            rgb_chunk = volume_rendering(rgb_for_vr, sigma_for_vr, t_values, batch_d)
+            rgb_chunk = volume_rendering(rgb_for_vr, sigma_for_vr, t_values)
 
             # 중간에 갑자기 왜 cpu로 돌리느냐
             # 메모리 절약 위함이라고 한다. gpu에 모든 정보를 다 올렸다가 터질 수 있으니, 이런 처리를 한다고 한다.

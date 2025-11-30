@@ -26,7 +26,7 @@ def rendering_one_img_for_test(model, idx=0, device = None, target='lego'):
       true_img = get_rgb(img_file_path)
 
       # chunking으로 메모리 터지는 거 방지
-      chunk_size = 4096
+      chunk_size = 1024
       all_rgb = []
 
       for i in range(0, rays_o.shape[0], chunk_size):
@@ -34,7 +34,7 @@ def rendering_one_img_for_test(model, idx=0, device = None, target='lego'):
             batch_d = rays_d[i : i+chunk_size]
             
             # test니까 그냥 64개 포인트로 지정
-            pts, t_vals = get_samples(batch_d, batch_o, num_of_samples = 64, mode='test')
+            pts, t_vals = get_samples(batch_d, batch_o, num_of_samples = 128, mode='test')
 
             pts_flat = pts.reshape(-1,3)
             dirs_expanded = batch_d[:,None,:].expand_as(pts)
@@ -42,8 +42,8 @@ def rendering_one_img_for_test(model, idx=0, device = None, target='lego'):
 
             raw_rgb, raw_sigma = model(pts_flat, dirs_flat)
 
-            rgb_for_vr = raw_rgb.reshape(batch_o.shape[0],64,3)
-            sigma_for_vr = raw_sigma.reshape(batch_o.shape[0],64)
+            rgb_for_vr = raw_rgb.reshape(batch_o.shape[0],128,3)
+            sigma_for_vr = raw_sigma.reshape(batch_o.shape[0],128)
 
             rgb_chunk = volume_rendering(rgb_for_vr, sigma_for_vr, t_vals)
 
@@ -61,6 +61,7 @@ def train(model=None, optimizer=None, target = 'lego'):
       device = set_device()
 
       model = model.to(device)
+      scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.1**(1/200000))
 
       num_img = 100
       num_of_pts_per_ray = 128
@@ -70,7 +71,7 @@ def train(model=None, optimizer=None, target = 'lego'):
 
       # 이제 학습 시작
       # epoch도 설정하고, sample을 몇 개 쓸 지도 결정하면 된다.
-      epoch = 100000
+      epoch = 200000
       num_of_rays = 512
       start_epoch = 0
 
@@ -105,7 +106,7 @@ def train(model=None, optimizer=None, target = 'lego'):
             batch_d = merged_ray_d[idx].to(device)
             batch_rgb = merged_rgb[idx].to(device)
 
-            pts, pts_dist_info = get_samples(batch_d, batch_o, mode='train')
+            pts, pts_dist_info = get_samples(batch_d, batch_o, mode='train', num_of_samples=num_of_pts_per_ray)
 
 
             # 여기부터 조금 어렵다...
@@ -119,6 +120,7 @@ def train(model=None, optimizer=None, target = 'lego'):
 
             # 그럼 방향 행렬과 pts는 현재, 1024 * 64 * 3(x,y,z) 형태이다. 저 앞에 1024 * 64의 점들을 합쳐서 dim = 2로 만들어줘야한다.
             pts_for_model = pts.reshape(-1,3)
+
             dir_for_model = direction_expanded.reshape(-1,3)
 
             # 이제 (pts_for_model, dir_for_model)이라는 페어가 만들어졌고, 이 값이 model의 input으로서 들어가진다.
@@ -150,9 +152,16 @@ def train(model=None, optimizer=None, target = 'lego'):
 
             # optimizer가 이것을 읽어서 오류를 반영해준다.
             optimizer.step()
+            scheduler.step()
+
+            # OOM 방지
+            del pred_rgb, batch_rgb, pts, pts_for_model, from_model_rgb, from_model_sigma
+            if i%100 == 0:
+                  torch.cuda.empty_cache()
+
 
             # 진짜와 비교 and 가중치 저장
-            if i%1000 == 0 and i >0:
+            if i%2000 == 0 and i >0:
                   # PSNR과 진짜 이미지와의 비교를 통해, 직접 얼마나 성장했나 보기
                   psnr_val = mse2pnsr(loss).item()
 
@@ -161,7 +170,11 @@ def train(model=None, optimizer=None, target = 'lego'):
                         pred_img, true_img = rendering_one_img_for_test(model, idx=0, device = device, target=target)
                   model.train()
 
-                  pbar.set_postfix({'Loss':f'{loss.item():.4f}', 'PSNR' : f'{psnr_val:.2f}'})
+                  current_lr = optimizer.param_groups[0]['lr']
+                  pbar.set_postfix({'Loss':f'{loss.item():.4f}', 
+                                    'PSNR' : f'{psnr_val:.2f}',
+                                    'LR': f'{current_lr:.6f}'
+                              })
 
                   combined_img = np.hstack((pred_img, true_img))
 
