@@ -100,7 +100,18 @@ def train(model=None, optimizer=None, target = 'lego'):
       pbar = tqdm(range(start_epoch,epoch),ncols=100)
 
       for i in pbar:
-            idx = np.random.choice(len(merged_ray_d),num_of_rays)
+            # random으로 돌리니, 중앙부가 제대로 안 보이게 됨.
+            # 중앙부, 바깥쪽 다 돌리는 걸로.
+            total_len = len(merged_ray_d)
+
+            center_start = int(total_len*0.25)
+            center_end = int(total_len*0.75)
+            center_indices = np.arange(center_start, center_end)
+
+            idx_center = np.random.choice(center_indices, num_of_rays//2)
+            idx_random = np.random.choice(total_len, num_of_rays//2)
+
+            idx = np.concatenate([idx_center, idx_random])
 
             batch_o = merged_ray_o[idx].to(device)
             batch_d = merged_ray_d[idx].to(device)
