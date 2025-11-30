@@ -68,6 +68,36 @@ def train(model=None, optimizer=None, target = 'lego'):
 
       merged_ray_o, merged_ray_d, merged_rgb = load_full_data(num_img, target)
 
+      """
+      중간에 값이 shape coordinate 매칭이 잘못되지는 않았는 지 확인.
+      try:
+            total_pixels = len(merged_rgb)
+            num_imgs = 100 # 로드한 이미지 수 (설정에 맞게 변경)
+            pixels_per_img = total_pixels // num_imgs
+            
+            # 정사각형 한 변의 길이 역산
+            H_crop = int(np.sqrt(pixels_per_img))
+            W_crop = H_crop
+            
+            print(f"Calculated Crop Size: {H_crop}x{W_crop}")
+
+            # 2. 첫 번째 이미지 복구 시도
+            test_img_flat = merged_rgb[:pixels_per_img]
+            test_img = test_img_flat.reshape(H_crop, W_crop, 3).cpu().numpy()
+
+            # 3. 그림 그리기
+            plt.figure(figsize=(5,5))
+            plt.imshow(test_img)
+            plt.title(f"Check: Is this a Lego? (Loss: 0.3)")
+            plt.axis('off')
+            plt.show()
+            plt.close()
+
+            # 사용자 확인용 (잠시 멈춤)
+            input("🛑 이미지를 확인하세요! 레고가 보이면 엔터, 노이즈면 중단.")
+
+      except Exception as e:
+            print(f"⚠️ 이미지 확인 실패: {e}")"""
 
       # 이제 학습 시작
       # epoch도 설정하고, sample을 몇 개 쓸 지도 결정하면 된다.
@@ -100,18 +130,7 @@ def train(model=None, optimizer=None, target = 'lego'):
       pbar = tqdm(range(start_epoch,epoch),ncols=100)
 
       for i in pbar:
-            # random으로 돌리니, 중앙부가 제대로 안 보이게 됨.
-            # 중앙부, 바깥쪽 다 돌리는 걸로.
-            total_len = len(merged_ray_d)
-
-            center_start = int(total_len*0.25)
-            center_end = int(total_len*0.75)
-            center_indices = np.arange(center_start, center_end)
-
-            idx_center = np.random.choice(center_indices, num_of_rays//2)
-            idx_random = np.random.choice(total_len, num_of_rays//2)
-
-            idx = np.concatenate([idx_center, idx_random])
+            idx = np.random.choice(len(merged_ray_d),num_of_rays)
 
             batch_o = merged_ray_o[idx].to(device)
             batch_d = merged_ray_d[idx].to(device)

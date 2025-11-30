@@ -16,14 +16,36 @@ def load_full_data(num_imgs=100, target='lego'):
     for i in range(num_imgs):
         ray_o, ray_d, img_path = get_ray('train', target,i)
             
-        ray_o = ray_o.reshape(-1,3)
-        ray_d = ray_d.reshape(-1,3)
 
-        rgb = get_rgb(img_path).reshape(-1,3)
+        # 중앙부 뽑기 시작.
+        rgb = get_rgb(img_path)
+        
+        if len(ray_o.shape) == 2:
+            H = int(np.sqrt(ray_o.shape[0]))
+            W = H
+            ray_o = ray_o.reshape(H,W,3)
+            ray_d = ray_d.reshape(H,W,3)
 
-        every_ray_o.append(ray_o)
-        every_ray_d.append(ray_d)
-        every_rgb.append(rgb)
+        if len(rgb.shape)== 2:
+            H = int(np.sqrt(rgb.shape[0]))
+            rgb = rgb.reshape(H,H,-1)
+
+        H, W = ray_o.shape[:2]
+        crop_h = int(H*0.5)
+        crop_w = int(W*0.5)
+
+        start_h = (H-crop_h)//2
+        end_h = start_h + crop_h
+        start_w = (W-crop_w)//2
+        end_w = start_w + crop_w
+
+        ray_o_cropped = ray_o[start_h:end_h, start_w:end_w]
+        ray_d_cropped = ray_d[start_h:end_h, start_w:end_w]
+        rgb_cropped = rgb[start_h:end_h, start_w:end_w, :]
+
+        every_ray_o.append(ray_o_cropped.reshape(-1,3))
+        every_ray_d.append(ray_d_cropped.reshape(-1,3))
+        every_rgb.append(rgb_cropped.reshape(-1,3))
 
     merged_ray_o = torch.from_numpy(np.concatenate(every_ray_o, axis=0)).float()
     merged_ray_d = torch.from_numpy(np.concatenate(every_ray_d, axis=0)).float()
