@@ -16,14 +16,14 @@ def mse2pnsr(mse):
 
 # 검증용 img 1장(test의 0번째 이미지로) 렌더링 함수
 @torch.no_grad() # 학습 아니니, grad 하지 말라는 표시
-def rendering_one_img_for_test(model, test_pose, true_img, focal, img_Height, img_Width, device):
+def rendering_one_img_for_test(model, test_pose, true_img, focal, img_Height, img_Width, device,num_of_pts_per_ray):
       test_pose = test_pose.to(device)
       rays_o, rays_d = get_ray(img_Height, img_Width, focal, test_pose)
 
       flat_rays_o = rays_o.reshape(-1,3).float()
       flat_rays_d = rays_d.reshape(-1,3).float()
 
-      num_rays = 64
+      
       chunk_size = 4096
       all_rgb = []
 
@@ -32,7 +32,7 @@ def rendering_one_img_for_test(model, test_pose, true_img, focal, img_Height, im
             batch_d = flat_rays_d[i : i+chunk_size]
             
             
-            pts, t_vals = get_samples(batch_d, batch_o, num_of_samples = num_rays, mode='test')
+            pts, t_vals = get_samples(batch_d, batch_o, num_of_samples = num_of_pts_per_ray, mode='test')
 
             pts_flat = pts.reshape(-1,3)
             dirs_expanded = batch_d[:,None,:].expand_as(pts)
@@ -40,8 +40,8 @@ def rendering_one_img_for_test(model, test_pose, true_img, focal, img_Height, im
 
             raw_rgb, raw_sigma = model(pts_flat, dirs_flat)
 
-            rgb_for_vr = raw_rgb.reshape(batch_o.shape[0],num_rays,3)
-            sigma_for_vr = raw_sigma.reshape(batch_o.shape[0],num_rays)
+            rgb_for_vr = raw_rgb.reshape(batch_o.shape[0],num_of_pts_per_ray,3)
+            sigma_for_vr = raw_sigma.reshape(batch_o.shape[0],num_of_pts_per_ray)
 
             rgb_chunk = volume_rendering(rgb_for_vr, sigma_for_vr, t_vals)
 
@@ -133,7 +133,7 @@ def train(model=None, optimizer=None, target = 'tiny_nerf_data.npz'):
 
                   model.eval()
                   with torch.no_grad():
-                        pred_img, true_img_np = rendering_one_img_for_test(model, Rot, true_img, focal, img_Height, img_Width, device)
+                        pred_img, true_img_np = rendering_one_img_for_test(model, Rot, true_img, focal, img_Height, img_Width, device, num_of_pts_per_ray)
                   model.train()
 
                   combined_img = np.hstack((pred_img, true_img_np))
