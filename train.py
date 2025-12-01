@@ -111,7 +111,7 @@ def train(model_coarse=None, model_fine=None, optimizer=None, target = 'lego'):
       num_of_rays = 512 # 메모리 보호를 위해 512 유지
       start_epoch = 0
       
-      resume_path = 'NeRF_weights/NeRF_weights_n.pth'
+      resume_path = 'NeRF_weights/NeRF_weights_8000.pth'
 
       # [수정] Resume 로직 (두 모델 로드)
       if os.path.exists(resume_path):
@@ -214,7 +214,7 @@ def train(model_coarse=None, model_fine=None, optimizer=None, target = 'lego'):
                   torch.cuda.empty_cache()
 
             # 검증 및 저장 (Fine Model 결과 사용)
-            if i%1000 == 0 and i >0: # 1000번으로 주기 늘림
+            if i%2000 == 0 and i >0: # 2000번으로 주기 늘림
                   psnr_val = mse2pnsr(loss_f).item()
 
                   model_coarse.eval()
