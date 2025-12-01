@@ -76,6 +76,10 @@ def train(model=None, optimizer=None, target = 'tiny_nerf_data.npz'):
       num_of_rays = 1024
       num_of_pts_per_ray = 64
 
+      x_epoch_history = []
+      y_psnr_history = []
+
+
       pbar = tqdm(range(epoch),ncols=100)
 
       for i in pbar:
@@ -117,6 +121,11 @@ def train(model=None, optimizer=None, target = 'tiny_nerf_data.npz'):
             optimizer.step()
             scheduler.step()
 
+            if i%500 == 0 and i>0:
+                  psnr_val = mse2pnsr(loss).item()
+                  x_epoch_history.append(i)
+                  y_psnr_history.append(psnr_val)
+
             # 진짜와 비교 and 가중치 저장
             if i%2500 == 0 and i >0:
                   # PSNR과 진짜 이미지와의 비교를 통해, 직접 얼마나 성장했나 보기
@@ -154,6 +163,21 @@ def train(model=None, optimizer=None, target = 'tiny_nerf_data.npz'):
                   plt.savefig(save_path, bbox_inches='tight', pad_inches= 0)
                   plt.close()
 
+
+      plt.figure(figsize=(10,6))
+      plt.plot(x_epoch_history,y_psnr_history, linestyle='-',color = 'blue', label='PSNR')
+
+      plt.title('NeRF Training PSNR Curve')
+      plt.xlabel('Epoch')
+      plt.ylabel('PSNR (dB')
+      plt.grid(True, linestyle='--',alpha=0.7)
+      plt.legend()
+
+      graph_save_path = 'psnr_graph.png'
+      plt.savefig(graph_save_path)
+      plt.close()
+
+      print(f'graph saved')
 
 
         
