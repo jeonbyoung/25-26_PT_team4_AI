@@ -8,7 +8,7 @@ class Customed_NeRF(nn.Module):
     def __init__(self, pos_encd_dim = 10, dir_dim = 4, num_of_hidden_nodes = 128):
         super().__init__()
 
-        self.box1 = nn.Sequential(nn.Linear(pos_encd_dim*6, num_of_hidden_nodes), nn.ReLU(),
+        self.box1 = nn.Sequential(nn.Linear(3+pos_encd_dim*6, num_of_hidden_nodes), nn.ReLU(),
                                   nn.Linear(num_of_hidden_nodes, num_of_hidden_nodes), nn.ReLU(),
                                   nn.Linear(num_of_hidden_nodes, num_of_hidden_nodes), nn.ReLU(),
                                   nn.Linear(num_of_hidden_nodes, num_of_hidden_nodes), nn.ReLU()
@@ -40,6 +40,8 @@ class Customed_NeRF(nn.Module):
     def forward(self, pixel_coordinate, dir):
         pos_x = self.positional_encoding(pixel_coordinate, self.pos_encd_dim)
         pos_dir = self.positional_encoding(dir, self.dir_dim)
+
+        pos_x = torch.cat([pixel_coordinate, pos_x], dim=-1)
 
         session1 = self.box1(pos_x)
         session2 = self.box2(torch.cat((session1, pos_x), dim = 1))
