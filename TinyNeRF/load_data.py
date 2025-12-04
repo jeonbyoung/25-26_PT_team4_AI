@@ -17,8 +17,8 @@ def set_device():
 def load_data(data_path, device):
     rawData = np.load(data_path)
     images = rawData["images"]
-    poses = rawData["poses"]
     focal = rawData["focal"]
+    poses = rawData["poses"]
 
     img_H, img_W = images.shape[1:3]
     img_H = int(img_H)
@@ -27,9 +27,9 @@ def load_data(data_path, device):
     testimg, testpose = images[99], poses[99]
 
     images = torch.tensor(images, dtype=torch.float32, device=device)
+    focal = torch.tensor(focal, dtype=torch.float32, device=device)
     poses = torch.tensor(poses,  dtype=torch.float32, device=device)
     testimg = torch.tensor(testimg, dtype=torch.float32, device=device)
     testpose = torch.tensor(testpose, dtype=torch.float32, device=device)
-    focal = torch.tensor(focal, dtype=torch.float32, device=device)
 
     return images, poses, focal, img_H, img_W, testimg, testpose

@@ -9,7 +9,7 @@ def cumprod_exclusive(tensor: torch.Tensor) -> torch.Tensor:
 
     return cumprod
 
-def render(model, rays_o, rays_d, near, far, n_samples, device, rand=False):
+def render(model, rays_o, rays_d, near, far, n_samples, device, L_embed=6, rand=False):
     def batchify(fn, chunk=1024*32):
         return lambda inputs: torch.cat([fn(inputs[i:i+chunk]) for i in range(0, inputs.shape[0], chunk)], 0)
 
@@ -24,7 +24,7 @@ def render(model, rays_o, rays_d, near, far, n_samples, device, rand=False):
     points = rays_o[..., None, :] + rays_d[..., None, :] * z[..., :, None]
 
     flat_points = torch.reshape(points, [-1, points.shape[-1]])
-    flat_points = positional_encoder(flat_points)
+    flat_points = positional_encoder(flat_points, L_embed=L_embed)
     
     raw = batchify(model)(flat_points)
     raw = torch.reshape(raw, list(points.shape[:-1]) + [4])

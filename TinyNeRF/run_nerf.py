@@ -7,6 +7,10 @@ from model import TinyNerfModel
 from train import train
 
 def main():
+    L_embed = 6
+    lr = 5e-3
+    n_iters = 30001
+
     # 1. Device 설정
     device = set_device()
     print(f"Using device: {device}")
@@ -17,14 +21,14 @@ def main():
     print(f"Data Loaded: Images {images.shape}, Focal {focal}")
 
     # 3. 모델 초기화
-    nerf = TinyNerfModel()
+    nerf = TinyNerfModel(num_encoding_functions=L_embed)
     nerf = nerf.to(device)
     
     # 4. 옵티마이저 설정
-    optimizer = torch.optim.Adam(nerf.parameters(), lr=5e-3, eps=1e-7)
+    optimizer = torch.optim.Adam(nerf.parameters(), lr=lr, eps=1e-7)
 
     # 5. 학습 시작
-    train(nerf, optimizer, images, poses, focal, H, W, testimg, testpose, device)
+    train(nerf, optimizer, images, poses, focal, H, W, testimg, testpose, device, n_iters=n_iters, L_embed=L_embed)
 
 if __name__ == "__main__":
     main()
